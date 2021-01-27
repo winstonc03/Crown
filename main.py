@@ -1,4 +1,4 @@
-import pygame
+import pygame, random
 
 # Global constants
 
@@ -17,24 +17,23 @@ SCREEN_HEIGHT = 800
 
 
 class Player(pygame.sprite.Sprite):
-    """ This class represents the bar at the bottom that the player
-        controls. """
 
     # -- Methods
-    def __init__(self, colour):
+    def __init__(self, image):
         """ Constructor function """
 
         # Call the parent's constructor
         super().__init__()
 
         # Create an image of the block, and fill it with a color.
-        # This could also be an image loaded from the disk.
-        width = 40
-        height = 60
-        self.image = pygame.Surface([width, height])
-        self.image.fill(colour)
+        # This could also be an image loaded from the disk
 
-        # Set a referance to the image rect.
+        self.image = pygame.image.load(image)
+        self.image = pygame.transform.scale(self.image, (40, 60))
+        # self.image.fill(colour)
+        # self.colour = colour
+
+        # Set a reference to the image rect.
         self.rect = self.image.get_rect()
 
         # Set speed vector of player
@@ -78,6 +77,26 @@ class Player(pygame.sprite.Sprite):
 
             # Stop our vertical movement
             self.vel_y = 0
+
+    def hit(self):
+        if self.vel_x == 0:
+            self.vel_x += 2
+        self.vel_x *= -2
+        # self.vel_x = 0
+        #TODO: fix collision
+
+    def crown(self, player):
+        if self.colour == WHITE and player.colour == YELLOW:
+            self.image.fill(YELLOW)
+            self.colour = YELLOW
+            player.image.fill(WHITE)
+            player.colour = WHITE
+
+        elif self.colour == YELLOW and player.colour == WHITE:
+            self.image.fill(WHITE)
+            self.colour = WHITE
+            player.image.fill(YELLOW)
+            player.colour = YELLOW
 
     def calc_grav(self):
         """ Calculate effect of gravity. """
@@ -194,6 +213,7 @@ def main():
     """ Main Program """
     pygame.init()
 
+    font = pygame.font.SysFont("arial", 16)
     # Set the height and width of the screen
     size = [SCREEN_WIDTH, SCREEN_HEIGHT]
     screen = pygame.display.set_mode(size)
@@ -201,9 +221,9 @@ def main():
     pygame.display.set_caption("Platformer Jumper")
 
     # Create the player
-    player = Player(RED)
-    player2 = Player(BLUE)
-    player3 = Player(YELLOW)
+    player = Player('./images/red.png')
+    player2 = Player('./images/blue.png')
+    player3 = Player('./images/pink.png')
 
     # Create all the levels
     level_list = [Level_01(player), Level_01(player2), Level_01(player3)]
@@ -213,6 +233,9 @@ def main():
     current_level = level_list[current_level_no]
 
     active_sprite_list = pygame.sprite.Group()
+    playergroup = pygame.sprite.Group()
+    player2group = pygame.sprite.Group()
+    player3group = pygame.sprite.Group()
     player.level = current_level
     player2.level = current_level
     player3.level = current_level
@@ -229,6 +252,13 @@ def main():
     active_sprite_list.add(player)
     active_sprite_list.add(player2)
     active_sprite_list.add(player3)
+
+    playergroup.add(player)
+
+    player2group.add(player2)
+
+    player3group.add(player3)
+
 
     # Loop until the user clicks the close button.
     done = False
@@ -286,6 +316,24 @@ def main():
         # Update items in the level
         current_level.update()
 
+        player_collide1 = pygame.sprite.spritecollideany(player, player2group, collided=None)
+        if player_collide1:
+            player.hit()
+            player2.hit()
+            player.crown(player2)
+
+        player_collide2 = pygame.sprite.spritecollideany(player2, player3group, collided=None)
+        if player_collide2:
+            player2.hit()
+            player3.hit()
+            player2.crown(player3)
+
+        player_collide3 = pygame.sprite.spritecollideany(player, player3group, collided=None)
+        if player_collide3:
+            player.hit()
+            player3.hit()
+            player.crown(player3)
+
         # If the player gets near the right side, shift the world left (-x)
         if player.rect.right > SCREEN_WIDTH:
             player.rect.right = SCREEN_WIDTH
@@ -305,11 +353,12 @@ def main():
 
         if player3.rect.left < 0:
             player3.rect.left = 0
+
         # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+        text = font.render("Test Font", True, (255, 255, 255))
+        screen.blit(text, (500, 500))
         current_level.draw(screen)
         active_sprite_list.draw(screen)
-
-        # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
 
         # Limit to 60 frames per second
         clock.tick(60)
