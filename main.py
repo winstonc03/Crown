@@ -1,19 +1,32 @@
-import pygame, random, time
+# Crown
+# Fun 3-player game inspired by Crown Capture from Pummel Party
+# Instructions:
+#      Fight to hold the crown the longest!
+#      Capture the crown by making contact with crown, or player holding the crown
+#      * Player 1 Moves with "W,A,D"
+#      * Player 2 Moves with Arrow Keys
+#      * Player 3 Moves with "I,J,L"
+
+import pygame, random
 
 # Global constants
+
+# Images for sprites
 RED = './images/red.png'
 RED_CROWN = './images/redcrown.png'
+
 BLUE = './images/blue.png'
 BLUE_CROWN = './images/blue crown.png'
+
 PINK = './images/pink.png'
 PINK_CROWN = './images/pink crown.png'
+
 CROWN = './images/crown.png'
 
 CROWN_LIST = [RED_CROWN, BLUE_CROWN, PINK_CROWN]
 
 # Colors
 BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED_COLOUR = (255, 0, 0)
 PINK_COLOUR = (255, 0, 255)
@@ -30,25 +43,26 @@ class Player(pygame.sprite.Sprite):
 
     # -- Methods
     def __init__(self, image, crown_image):
-        """ Constructor function """
+        """ Constructor function, takes in arguments for
+        image of player without crown and with crown"""
 
         # Call the parent's constructor
         super().__init__()
 
         # Create an image of the block
-
         self.image = pygame.image.load(image)
+
+        # store the two images of player so we can switch between them
         self.crown_image = crown_image
         self.base_image = image
         self.image = pygame.transform.scale(self.image, (40, 60))
 
+        # all players start without crown
         self.has_crown = False
+
         self.score = 0
 
-        # self.image.fill(colour)
-        # self.colour = colour
-
-        # Set a reference to the image rect.i
+        # Set a reference to the image rect
         self.rect = self.image.get_rect()
 
         # Set speed vector of player
@@ -65,7 +79,7 @@ class Player(pygame.sprite.Sprite):
         # Move left/right
         self.rect.x += self.vel_x
 
-        # See if we hit anything
+        # See if we hit platform
         block_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
         for block in block_hit_list:
             # If we are moving right,
@@ -92,21 +106,28 @@ class Player(pygame.sprite.Sprite):
             # Stop our vertical movement
             self.vel_y = 0
 
+    # Knockback if collide with another player
     def hit(self):
+        # stops game from breaking when landing on top of afk player
         if self.vel_x == 0:
             self.vel_x = random.choice([5, -5])
 
+        # stop collisions from teleporting across the screen
         if abs(self.vel_x) >= 10:
             self.vel_x = 0
 
+        # bump player backwards and up
         self.vel_x *= -2
         self.vel_y = -10
 
+    # Handle transfer of crown between players
     def crown(self, player):
 
         if self.has_crown:
             self.has_crown = False
             player.has_crown = True
+
+            # Change sprite image to show which player has crown
             self.image = pygame.image.load(self.base_image)
             self.image = pygame.transform.scale(self.image, (40, 60))
             player.image = pygame.image.load(player.crown_image)
@@ -115,6 +136,8 @@ class Player(pygame.sprite.Sprite):
         elif player.has_crown:
             self.has_crown = True
             player.has_crown = False
+
+            # Change sprite image to show which player has crown
             self.image = pygame.image.load(self.crown_image)
             self.image = pygame.transform.scale(self.image, (40, 60))
             player.image = pygame.image.load(player.base_image)
@@ -137,7 +160,6 @@ class Player(pygame.sprite.Sprite):
 
         # move down a bit and see if there is a platform below us.
         # Move down 2 pixels because it doesn't work well if we only move down
-        # 1 when working with a platform moving down.
         self.rect.y += 2
         platform_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
         self.rect.y -= 2
@@ -148,11 +170,11 @@ class Player(pygame.sprite.Sprite):
 
     # Player-controlled movement:
     def go_left(self):
-        """ Called when the user hits the left arrow. """
+        """ Called when the user hits the left designated button. """
         self.vel_x = -6
 
     def go_right(self):
-        """ Called when the user hits the right arrow. """
+        """ Called when the user hits the right designated button. """
         self.vel_x = 6
 
     def stop(self):
@@ -176,23 +198,26 @@ class Platform(pygame.sprite.Sprite):
 
 
 class Crown(pygame.sprite.Sprite):
-    """ Crown spawns somewhere random at the start """
+    """ Crown spawns at start of the game"""
 
     def __init__(self):
-        """ Platform constructor. Assumes constructed with user passing in
-            an array of 5 numbers like what's defined at the top of this
-            code. """
+
         super().__init__()
 
         self.image = pygame.image.load(CROWN)
         self.image = pygame.transform.scale(self.image, (56, 38))
         self.rect = self.image.get_rect()
+
+        # captured argument prevents crown from being captured infinitely
         self.captured = False
 
+    # Give crown to player who makes contact with crown
     def crown(self, player):
         player.has_crown = True
         player.image = pygame.image.load(player.crown_image)
         player.image = pygame.transform.scale(player.image, (40, 60))
+
+        # Remove crown sprite from screen
         self.kill()
 
 
@@ -221,7 +246,7 @@ class Level(object):
         # Draw the background
         screen.fill(SKY_BLUE)
 
-        # Draw all the sprite lists that we have
+        # Draw the platforms
         self.platform_list.draw(screen)
 
 
@@ -255,6 +280,8 @@ class Level_01(Level):
 def main():
     """ Main Program """
     pygame.init()
+
+    # Fonts for score text and timer text
     timerFont = pygame.font.Font(None, 80)
     scoreFont = pygame.font.SysFont("Verdana", 50)
 
@@ -262,21 +289,23 @@ def main():
     size = [SCREEN_WIDTH, SCREEN_HEIGHT]
     screen = pygame.display.set_mode(size)
 
+    # Title of game
     pygame.display.set_caption("Crown")
 
-    # Create the player
+    # Create the players and crown
     player = Player(RED, RED_CROWN)
     player2 = Player(BLUE, BLUE_CROWN)
     player3 = Player(PINK, PINK_CROWN)
     crown = Crown()
 
-    # Create all the levels
+    # Create the levels with the controllable players
     level_list = [Level_01(player), Level_01(player2), Level_01(player3)]
 
     # Set the current level
     current_level_no = 0
     current_level = level_list[current_level_no]
 
+    # initialize sprite groups needed
     active_sprite_list = pygame.sprite.Group()
     playergroup = pygame.sprite.Group()
     player2group = pygame.sprite.Group()
@@ -287,6 +316,7 @@ def main():
     player2.level = current_level
     player3.level = current_level
 
+    # Spawn in each player
     player.rect.x = SCREEN_WIDTH / 3
     player.rect.y = SCREEN_HEIGHT - player.rect.height
 
@@ -296,8 +326,9 @@ def main():
     player3.rect.x = SCREEN_WIDTH - 80
     player3.rect.y = SCREEN_HEIGHT - player.rect.height
 
+    # Crown spawns somewhere random, but within reach of players
     crown.rect.x = random.randrange(SCREEN_WIDTH - crown.rect.width)
-    crown.rect.y = random.randrange(200, SCREEN_HEIGHT - 400)
+    crown.rect.y = random.randrange(300, SCREEN_HEIGHT - 400)
 
     active_sprite_list.add(player)
     active_sprite_list.add(player2)
@@ -305,10 +336,9 @@ def main():
     active_sprite_list.add(crown)
     crown_group.add(crown)
 
+    # individual sprite groups for collision to work
     playergroup.add(player)
-
     player2group.add(player2)
-
     player3group.add(player3)
 
     # Loop until the user clicks the close button.
@@ -316,8 +346,11 @@ def main():
 
     # Used to manage how fast the screen updates
     clock = pygame.time.Clock()
-    timer = 4
 
+    # Timer to end game when finished
+    timer = 45
+
+    # update score while a player holds the crown
     def score():
         if player.has_crown:
             player.score += 1
@@ -333,6 +366,7 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
 
+            # Player 1 controls
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     player.go_left()
@@ -341,6 +375,7 @@ def main():
                 if event.key == pygame.K_UP:
                     player.jump()
 
+                # Player 2 controls
                 if event.key == pygame.K_a:
                     player2.go_left()
                 if event.key == pygame.K_d:
@@ -348,6 +383,7 @@ def main():
                 if event.key == pygame.K_w:
                     player2.jump()
 
+                # Player 3 controls
                 if event.key == pygame.K_j:
                     player3.go_left()
                 if event.key == pygame.K_l:
@@ -355,6 +391,7 @@ def main():
                 if event.key == pygame.K_i:
                     player3.jump()
 
+            # Stop player movement when they let go of keys
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT and player.vel_x < 0:
                     player.stop()
@@ -371,12 +408,13 @@ def main():
                 if event.key == pygame.K_l and player3.vel_x > 0:
                     player3.stop()
 
-        # Update the player.
+        # Update the players
         active_sprite_list.update()
 
         # Update items in the level
         current_level.update()
 
+        # Handle collisions for each player
         player_collide1 = pygame.sprite.spritecollideany(player, player2group, collided=None)
         if player_collide1:
             player.hit()
@@ -395,6 +433,7 @@ def main():
             player3.hit()
             player.crown(player3)
 
+        # Handle capturing of crown at the start of the game
         p1_capture = pygame.sprite.spritecollideany(crown, playergroup, collided=None)
         if p1_capture:
             if not crown.captured:
@@ -413,7 +452,7 @@ def main():
                 crown.crown(player3)
                 crown.captured = True
 
-        # If the player gets near the right side, shift the world left (-x)
+        # Stop player from running outside screen
         if player.rect.right > SCREEN_WIDTH:
             player.rect.right = SCREEN_WIDTH
 
@@ -423,7 +462,6 @@ def main():
         if player3.rect.right > SCREEN_WIDTH:
             player3.rect.right = SCREEN_WIDTH
 
-        # If the player gets near the left side, shift the world right (+x)
         if player.rect.left < 0:
             player.rect.left = 0
 
@@ -433,7 +471,7 @@ def main():
         if player3.rect.left < 0:
             player3.rect.left = 0
 
-        # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+        # Draw Screen
 
         current_level.draw(screen)
         active_sprite_list.draw(screen)
@@ -442,28 +480,35 @@ def main():
         clock.tick(60)
 
         if timer <= 0:
-
             done = True
 
+        # Text strings for timer and scores
         timer_text = timerFont.render(str(round(timer, 1)), True, BLACK)
         score1_text = scoreFont.render(str(round(player.score, 0)), True, RED_COLOUR)
         score2_text = scoreFont.render(str(round(player2.score, 0)), True, BLUE_COLOUR)
         score3_text = scoreFont.render(str(round(player3.score, 0)), True, PINK_COLOUR)
-        screen.blit(timer_text, (550, 70))
-        screen.blit(score1_text, (70, 70))
-        screen.blit(score2_text, (170, 70))
-        screen.blit(score3_text, (270, 70))
 
+        # Show timer and scores on screen
+        screen.blit(timer_text, (550, 70))
+        screen.blit(score1_text, (50, 70))
+        screen.blit(score2_text, (170, 70))
+        screen.blit(score3_text, (290, 70))
+
+        # reduce timer
         timer -= 0.015
 
-        # add point to player with crown
+        # add points to player with crown
         score()
-        # Go ahead and update the screen with what we've drawn.
+        # Update the screen with what we've drawn.
         pygame.display.flip()
 
     # End Screen
+
+    # initialize winner variables
     winner = ""
     winner_colour = BLACK
+
+    # Determine winner
     if player.score > player2.score:
         if player.score > player3.score:
             winner = "Red Wins!"
@@ -480,24 +525,28 @@ def main():
             winner = "Pink Wins!"
             winner_colour = PINK_COLOUR
 
+    # Format the scores into strings
     score1 = "Red: " + str(round(player.score, 0))
     score2 = "Blue: " + str(round(player2.score, 0))
     score3 = "Pink: " + str(round(player3.score, 0))
+
+    # Text strings for results
     winner_text = scoreFont.render(winner, True, winner_colour)
     score1_text = scoreFont.render(score1, True, RED_COLOUR)
     score2_text = scoreFont.render(score2, True, BLUE_COLOUR)
     score3_text = scoreFont.render(score3, True, PINK_COLOUR)
+
+    # Clear Screen and show results
     screen.fill(SKY_BLUE)
-    screen.blit(winner_text, (550, 200))
+    screen.blit(winner_text, (450, 200))
     screen.blit(score1_text, (450, 400))
     screen.blit(score2_text, (450, 500))
     screen.blit(score3_text, (450, 600))
     pygame.display.update()
+
+    # Give time for users to look at scores before quitting
     pygame.time.wait(5000)
 
-
-    # Be IDLE friendly. If you forget this line, the program will 'hang'
-    # on exit.
 
 if __name__ == "__main__":
     main()
