@@ -1,13 +1,23 @@
-import pygame, random
+import pygame, random, time
 
 # Global constants
+RED = './images/red.png'
+RED_CROWN = './images/redcrown.png'
+BLUE = './images/blue.png'
+BLUE_CROWN = './images/blue crown.png'
+PINK = './images/pink.png'
+PINK_CROWN = './images/pink crown.png'
+CROWN = './images/crown.png'
+
+CROWN_LIST = [RED_CROWN, BLUE_CROWN, PINK_CROWN]
 
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
+RED_COLOUR = (255, 0, 0)
+PINK_COLOUR = (255, 0, 255)
+BLUE_COLOUR = (0, 255, 255)
 SKY_BLUE = (95, 165, 228)
 YELLOW = (255, 255, 0)
 
@@ -19,28 +29,32 @@ SCREEN_HEIGHT = 800
 class Player(pygame.sprite.Sprite):
 
     # -- Methods
-    def __init__(self, image):
+    def __init__(self, image, crown_image):
         """ Constructor function """
 
         # Call the parent's constructor
         super().__init__()
 
-        # Create an image of the block, and fill it with a color.
-        # This could also be an image loaded from the disk
+        # Create an image of the block
 
         self.image = pygame.image.load(image)
+        self.crown_image = crown_image
+        self.base_image = image
         self.image = pygame.transform.scale(self.image, (40, 60))
+
+        self.has_crown = False
+        self.score = 0
+
         # self.image.fill(colour)
         # self.colour = colour
 
-        # Set a reference to the image rect.
+        # Set a reference to the image rect.i
         self.rect = self.image.get_rect()
 
         # Set speed vector of player
         self.vel_x = 0
         self.vel_y = 0
 
-        # List of sprites we can bump against
         self.level = None
 
     def update(self):
@@ -80,23 +94,31 @@ class Player(pygame.sprite.Sprite):
 
     def hit(self):
         if self.vel_x == 0:
-            self.vel_x += 2
+            self.vel_x = random.choice([5, -5])
+
+        if abs(self.vel_x) >= 10:
+            self.vel_x = 0
+
         self.vel_x *= -2
-        # self.vel_x = 0
-        #TODO: fix collision
+        self.vel_y = -10
 
     def crown(self, player):
-        if self.colour == WHITE and player.colour == YELLOW:
-            self.image.fill(YELLOW)
-            self.colour = YELLOW
-            player.image.fill(WHITE)
-            player.colour = WHITE
 
-        elif self.colour == YELLOW and player.colour == WHITE:
-            self.image.fill(WHITE)
-            self.colour = WHITE
-            player.image.fill(YELLOW)
-            player.colour = YELLOW
+        if self.has_crown:
+            self.has_crown = False
+            player.has_crown = True
+            self.image = pygame.image.load(self.base_image)
+            self.image = pygame.transform.scale(self.image, (40, 60))
+            player.image = pygame.image.load(player.crown_image)
+            player.image = pygame.transform.scale(player.image, (40, 60))
+
+        elif player.has_crown:
+            self.has_crown = True
+            player.has_crown = False
+            self.image = pygame.image.load(self.crown_image)
+            self.image = pygame.transform.scale(self.image, (40, 60))
+            player.image = pygame.image.load(player.base_image)
+            player.image = pygame.transform.scale(player.image, (40, 60))
 
     def calc_grav(self):
         """ Calculate effect of gravity. """
@@ -153,6 +175,27 @@ class Platform(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
 
+class Crown(pygame.sprite.Sprite):
+    """ Crown spawns somewhere random at the start """
+
+    def __init__(self):
+        """ Platform constructor. Assumes constructed with user passing in
+            an array of 5 numbers like what's defined at the top of this
+            code. """
+        super().__init__()
+
+        self.image = pygame.image.load(CROWN)
+        self.image = pygame.transform.scale(self.image, (56, 38))
+        self.rect = self.image.get_rect()
+        self.captured = False
+
+    def crown(self, player):
+        player.has_crown = True
+        player.image = pygame.image.load(player.crown_image)
+        player.image = pygame.transform.scale(player.image, (40, 60))
+        self.kill()
+
+
 class Level(object):
     """ This is a generic super-class used to define a level.
         Create a child class for each level with level-specific
@@ -164,7 +207,7 @@ class Level(object):
         self.platform_list = pygame.sprite.Group()
         self.player = player
 
-        # Background image
+        # TODO: Background image?
         self.background = None
 
     # Update everything on this level
@@ -193,7 +236,7 @@ class Level_01(Level):
         Level.__init__(self, player)
 
         # Array with width, height, x, and y of platform
-        level = [[210, 30, 150, 600],
+        level = [[210, 30, 160, 600],
                  [210, 30, 500, 700],
                  [210, 30, 580, 450],
                  [100, 30, 0, 475],
@@ -212,18 +255,20 @@ class Level_01(Level):
 def main():
     """ Main Program """
     pygame.init()
+    timerFont = pygame.font.Font(None, 80)
+    scoreFont = pygame.font.SysFont("Verdana", 50)
 
-    font = pygame.font.SysFont("arial", 16)
     # Set the height and width of the screen
     size = [SCREEN_WIDTH, SCREEN_HEIGHT]
     screen = pygame.display.set_mode(size)
 
-    pygame.display.set_caption("Platformer Jumper")
+    pygame.display.set_caption("Crown")
 
     # Create the player
-    player = Player('./images/red.png')
-    player2 = Player('./images/blue.png')
-    player3 = Player('./images/pink.png')
+    player = Player(RED, RED_CROWN)
+    player2 = Player(BLUE, BLUE_CROWN)
+    player3 = Player(PINK, PINK_CROWN)
+    crown = Crown()
 
     # Create all the levels
     level_list = [Level_01(player), Level_01(player2), Level_01(player3)]
@@ -236,6 +281,8 @@ def main():
     playergroup = pygame.sprite.Group()
     player2group = pygame.sprite.Group()
     player3group = pygame.sprite.Group()
+    crown_group = pygame.sprite.Group()
+
     player.level = current_level
     player2.level = current_level
     player3.level = current_level
@@ -249,9 +296,14 @@ def main():
     player3.rect.x = SCREEN_WIDTH - 80
     player3.rect.y = SCREEN_HEIGHT - player.rect.height
 
+    crown.rect.x = random.randrange(SCREEN_WIDTH - crown.rect.width)
+    crown.rect.y = random.randrange(200, SCREEN_HEIGHT - 400)
+
     active_sprite_list.add(player)
     active_sprite_list.add(player2)
     active_sprite_list.add(player3)
+    active_sprite_list.add(crown)
+    crown_group.add(crown)
 
     playergroup.add(player)
 
@@ -259,18 +311,27 @@ def main():
 
     player3group.add(player3)
 
-
     # Loop until the user clicks the close button.
     done = False
 
     # Used to manage how fast the screen updates
     clock = pygame.time.Clock()
+    timer = 4
+
+    def score():
+        if player.has_crown:
+            player.score += 1
+        elif player2.has_crown:
+            player2.score += 1
+        elif player3.has_crown:
+            player3.score += 1
 
     # -------- Main Program Loop -----------
+
     while not done:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                done = True
+                pygame.quit()
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
@@ -334,6 +395,24 @@ def main():
             player3.hit()
             player.crown(player3)
 
+        p1_capture = pygame.sprite.spritecollideany(crown, playergroup, collided=None)
+        if p1_capture:
+            if not crown.captured:
+                crown.crown(player)
+                crown.captured = True
+
+        p2_capture = pygame.sprite.spritecollideany(crown, player2group, collided=None)
+        if p2_capture:
+            if not crown.captured:
+                crown.crown(player2)
+                crown.captured = True
+
+        p3_capture = pygame.sprite.spritecollideany(crown, player3group, collided=None)
+        if p3_capture:
+            if not crown.captured:
+                crown.crown(player3)
+                crown.captured = True
+
         # If the player gets near the right side, shift the world left (-x)
         if player.rect.right > SCREEN_WIDTH:
             player.rect.right = SCREEN_WIDTH
@@ -355,21 +434,72 @@ def main():
             player3.rect.left = 0
 
         # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-        text = font.render("Test Font", True, (255, 255, 255))
-        screen.blit(text, (500, 500))
+
         current_level.draw(screen)
         active_sprite_list.draw(screen)
 
         # Limit to 60 frames per second
         clock.tick(60)
 
+        if timer <= 0:
+
+            done = True
+
+        timer_text = timerFont.render(str(round(timer, 1)), True, BLACK)
+        score1_text = scoreFont.render(str(round(player.score, 0)), True, RED_COLOUR)
+        score2_text = scoreFont.render(str(round(player2.score, 0)), True, BLUE_COLOUR)
+        score3_text = scoreFont.render(str(round(player3.score, 0)), True, PINK_COLOUR)
+        screen.blit(timer_text, (550, 70))
+        screen.blit(score1_text, (70, 70))
+        screen.blit(score2_text, (170, 70))
+        screen.blit(score3_text, (270, 70))
+
+        timer -= 0.015
+
+        # add point to player with crown
+        score()
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
 
+    # End Screen
+    winner = ""
+    winner_colour = BLACK
+    if player.score > player2.score:
+        if player.score > player3.score:
+            winner = "Red Wins!"
+            winner_colour = RED_COLOUR
+        else:
+            winner = "Pink Wins!"
+            winner_colour = PINK_COLOUR
+
+    elif player2.score > player.score:
+        if player2.score > player3.score:
+            winner = "Blue Wins!"
+            winner_colour = BLUE_COLOUR
+        else:
+            winner = "Pink Wins!"
+            winner_colour = PINK_COLOUR
+
+    score1 = "Red: " + str(round(player.score, 0))
+    score2 = "Blue: " + str(round(player2.score, 0))
+    score3 = "Pink: " + str(round(player3.score, 0))
+    winner_text = scoreFont.render(winner, True, winner_colour)
+    score1_text = scoreFont.render(score1, True, RED_COLOUR)
+    score2_text = scoreFont.render(score2, True, BLUE_COLOUR)
+    score3_text = scoreFont.render(score3, True, PINK_COLOUR)
+    screen.fill(SKY_BLUE)
+    screen.blit(winner_text, (550, 200))
+    screen.blit(score1_text, (450, 400))
+    screen.blit(score2_text, (450, 500))
+    screen.blit(score3_text, (450, 600))
+    pygame.display.update()
+    pygame.time.wait(5000)
+
+
     # Be IDLE friendly. If you forget this line, the program will 'hang'
     # on exit.
-    pygame.quit()
-
 
 if __name__ == "__main__":
     main()
+
+pygame.quit()
