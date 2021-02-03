@@ -11,7 +11,7 @@ import pygame, random
 
 # Global constants
 
-# Images for sprites
+# Images
 RED = './images/red.png'
 RED_CROWN = './images/redcrown.png'
 
@@ -23,11 +23,17 @@ PINK_CROWN = './images/pink crown.png'
 
 CROWN = './images/crown.png'
 
+BACKGROUND = './images/neon.jpg'
+RESULT_BG = './images/result_bg.jpg'
+
+# Define images that hold a crown
 CROWN_LIST = [RED_CROWN, BLUE_CROWN, PINK_CROWN]
 
 # Colors
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
+ORANGEY = (232, 93, 89)
+WHITE = (255, 255, 255)
 RED_COLOUR = (255, 0, 0)
 PINK_COLOUR = (255, 0, 255)
 BLUE_COLOUR = (0, 255, 255)
@@ -37,6 +43,14 @@ YELLOW = (255, 255, 0)
 # Screen dimensions
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
+
+# Sounds for game
+pygame.mixer.init()
+background_song = pygame.mixer.Sound("./sounds/background_song.mp3")
+
+# Hit sounds
+hit_sound = pygame.mixer.Sound("./sounds/hit_sound.mp3")
+crown_sound = pygame.mixer.Sound("./sounds/crown_sound.mp3")
 
 
 class Player(pygame.sprite.Sprite):
@@ -132,6 +146,7 @@ class Player(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.image, (40, 60))
             player.image = pygame.image.load(player.crown_image)
             player.image = pygame.transform.scale(player.image, (40, 60))
+            pygame.mixer.Sound.play(crown_sound)
 
         elif player.has_crown:
             self.has_crown = True
@@ -142,6 +157,11 @@ class Player(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(self.image, (40, 60))
             player.image = pygame.image.load(player.base_image)
             player.image = pygame.transform.scale(player.image, (40, 60))
+            pygame.mixer.Sound.play(crown_sound)
+
+        # if both players don't have crown play different sound
+        else:
+            pygame.mixer.Sound.play(hit_sound)
 
     def calc_grav(self):
         """ Calculate effect of gravity. """
@@ -192,7 +212,7 @@ class Platform(pygame.sprite.Sprite):
         super().__init__()
 
         self.image = pygame.Surface([width, height])
-        self.image.fill(GREEN)
+        self.image.fill(ORANGEY)
 
         self.rect = self.image.get_rect()
 
@@ -216,6 +236,7 @@ class Crown(pygame.sprite.Sprite):
         player.has_crown = True
         player.image = pygame.image.load(player.crown_image)
         player.image = pygame.transform.scale(player.image, (40, 60))
+        pygame.mixer.Sound.play(crown_sound)
 
         # Remove crown sprite from screen
         self.kill()
@@ -232,9 +253,6 @@ class Level(object):
         self.platform_list = pygame.sprite.Group()
         self.player = player
 
-        # TODO: Background image?
-        self.background = None
-
     # Update everything on this level
     def update(self):
         """ Update everything in this level."""
@@ -242,9 +260,6 @@ class Level(object):
 
     def draw(self, screen):
         """ Draw everything on this level. """
-
-        # Draw the background
-        screen.fill(SKY_BLUE)
 
         # Draw the platforms
         self.platform_list.draw(screen)
@@ -288,6 +303,13 @@ def main():
     # Set the height and width of the screen
     size = [SCREEN_WIDTH, SCREEN_HEIGHT]
     screen = pygame.display.set_mode(size)
+
+    # Variables for background
+    background_image = pygame.image.load(BACKGROUND).convert()
+    result_bg = pygame.image.load(RESULT_BG).convert()
+
+    # Play background song
+    pygame.mixer.Sound.play(background_song)
 
     # Title of game
     pygame.display.set_caption("Crown")
@@ -471,11 +493,6 @@ def main():
         if player3.rect.left < 0:
             player3.rect.left = 0
 
-        # Draw Screen
-
-        current_level.draw(screen)
-        active_sprite_list.draw(screen)
-
         # Limit to 60 frames per second
         clock.tick(60)
 
@@ -483,16 +500,22 @@ def main():
             done = True
 
         # Text strings for timer and scores
-        timer_text = timerFont.render(str(round(timer, 1)), True, BLACK)
+        timer_text = timerFont.render(str(round(timer, 1)), True, WHITE)
         score1_text = scoreFont.render(str(round(player.score, 0)), True, RED_COLOUR)
         score2_text = scoreFont.render(str(round(player2.score, 0)), True, BLUE_COLOUR)
         score3_text = scoreFont.render(str(round(player3.score, 0)), True, PINK_COLOUR)
 
+        # Background image
+        screen.blit(background_image, [0, 0])
         # Show timer and scores on screen
         screen.blit(timer_text, (550, 70))
         screen.blit(score1_text, (50, 70))
         screen.blit(score2_text, (170, 70))
         screen.blit(score3_text, (290, 70))
+
+        # Draw Screen
+        current_level.draw(screen)
+        active_sprite_list.draw(screen)
 
         # reduce timer
         timer -= 0.015
@@ -537,11 +560,11 @@ def main():
     score3_text = scoreFont.render(score3, True, PINK_COLOUR)
 
     # Clear Screen and show results
-    screen.fill(SKY_BLUE)
-    screen.blit(winner_text, (450, 200))
-    screen.blit(score1_text, (450, 400))
-    screen.blit(score2_text, (450, 500))
-    screen.blit(score3_text, (450, 600))
+    screen.blit(result_bg, [0, 0])
+    screen.blit(winner_text, (450, 100))
+    screen.blit(score1_text, (450, 300))
+    screen.blit(score2_text, (450, 400))
+    screen.blit(score3_text, (450, 500))
     pygame.display.update()
 
     # Give time for users to look at scores before quitting
